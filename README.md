@@ -35,3 +35,36 @@ gcc -o forth forth.c -g  -ldl -L. -lforth_primitives
 
 
 ./forth 
+
+sample execution 
+
+Forth interpreter (tapez 'quit' pour quitter)
+
+> : carre dup * ;
+> 
+  carre (compiled_func=0x7f842ce2d139)
+  
+Pile (sp=0): vide
+
+> : cube dup carre * ;
+> 
+  carre (compiled_func=0x7f842ce2d139)
+  
+  cube (compiled_func=0x7f842ce28159)
+  
+Pile (sp=0): vide
+
+> : test do i cube loop ;
+> 
+  carre (compiled_func=0x7f842ce2d139)
+  
+  cube (compiled_func=0x7f842ce28159)
+  
+  test (compiled_func=0x7f842cbf7179)
+  
+ 
+> 10 0 test
+> 
+Pile (sp=11): 11 0 1 8 27 64 125 216 343 512 729 
+
+> 
