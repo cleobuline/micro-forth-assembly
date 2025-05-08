@@ -29,14 +29,7 @@ asm(
     "    mov [rdi + rbx*8 - 16], rax\n" /* stack[sp-2] = c */
     "    mov [rdi + rbx*8 - 24], rcx\n" /* stack[sp-3] = b */
     "    mov [rsi], rbx\n"              /* Met à jour sp (rbx est 64 bits, inchangé) */
-    "    pop rdx\n"
-    "    pop rcx\n"
-    "    pop r13\n"
-    "    pop r12\n"
-    "    pop rbp\n"
-    "    pop rbx\n"
-    "    ret\n"
-    ".stack_empty:\n"
+	".stack_empty:\n"
     "    pop rdx\n"
     "    pop rcx\n"
     "    pop r13\n"
