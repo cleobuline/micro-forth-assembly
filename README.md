@@ -32,4 +32,6 @@ gcc -shared -fPIC -Wl,--export-dynamic add_wrapper.o dot_wrapper.o dup_wrapper.o
 export LD_LIBRARY_PATH=.:$LD_LIBRARY_PATH 
 
 gcc -o forth forth.c -g  -ldl -L. -lforth_primitives
+
+
 ./forth 
