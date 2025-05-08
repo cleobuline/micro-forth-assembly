@@ -186,9 +186,13 @@ void generate_asm(UserWord *word) {
     fprintf(f, "void %s(int64_t *stack, int *sp, int64_t *control_stack, int *csp) {\n", word->name);
     fprintf(f, "    asm volatile (\n");
     fprintf(f, "        \".intel_syntax noprefix\\n\"\n");
+    // Sauvegarde des registres callee-saved
     fprintf(f, "        \"push rbp\\n\"\n");
     fprintf(f, "        \"push rbx\\n\"\n");
     fprintf(f, "        \"push r12\\n\"\n");
+    fprintf(f, "        \"push r13\\n\"\n");
+    fprintf(f, "        \"push r14\\n\"\n");
+    fprintf(f, "        \"push r15\\n\"\n");
 
     int end_label_counter = 0; // Compteur pour étiquettes .endX uniques
     for (int i = 0; i < word->token_count; i++) {
@@ -238,7 +242,22 @@ void generate_asm(UserWord *word) {
                 return;
             }
         } else if (word->tokens[i].is_number == 2) {
+            // Sauvegarde des registres d'arguments avant l'appel
+            fprintf(f, "        \"push rdi\\n\"\n");
+            fprintf(f, "        \"push rsi\\n\"\n");
+            fprintf(f, "        \"push rcx\\n\"\n");
+            fprintf(f, "        \"push rdx\\n\"\n");
+            // Configurer les arguments pour l'appel
+            fprintf(f, "        \"mov rdi, %p\\n\"\n", stack);
+            fprintf(f, "        \"mov rsi, %p\\n\"\n", &sp);
+            fprintf(f, "        \"mov rcx, %p\\n\"\n", control_stack);
+            fprintf(f, "        \"mov rdx, %p\\n\"\n", &csp);
             fprintf(f, "        \"call %s\\n\"\n", word->tokens[i].data.func_name);
+            // Restaurer les registres après l'appel
+            fprintf(f, "        \"pop rdx\\n\"\n");
+            fprintf(f, "        \"pop rcx\\n\"\n");
+            fprintf(f, "        \"pop rsi\\n\"\n");
+            fprintf(f, "        \"pop rdi\\n\"\n");
         } else if (word->tokens[i].is_number == 3) {
             fprintf(f, "        \"call forth_do\\n\"\n");
             fprintf(f, "        \".loop_start_%d:\\n\"\n", word->tokens[i].data.loop_label);
@@ -249,13 +268,17 @@ void generate_asm(UserWord *word) {
             fprintf(f, "        \".loop_end_%d:\\n\"\n", word->tokens[i].data.loop_label);
         }
     }
+    // Restauration des registres callee-saved
+    fprintf(f, "        \"pop r15\\n\"\n");
+    fprintf(f, "        \"pop r14\\n\"\n");
+    fprintf(f, "        \"pop r13\\n\"\n");
     fprintf(f, "        \"pop r12\\n\"\n");
     fprintf(f, "        \"pop rbx\\n\"\n");
     fprintf(f, "        \"pop rbp\\n\"\n");
     fprintf(f, "        \".att_syntax\\n\"\n");
-    fprintf(f, "        : \"+m\"(*sp), \"+m\"(*csp)\n");
-    fprintf(f, "        : \"D\"(stack), \"S\"(sp), \"c\"(control_stack), \"d\"(csp)\n");
-    fprintf(f, "        : \"rax\", \"r8\", \"r9\", \"r10\", \"r11\", \"r12\", \"memory\"\n");
+    fprintf(f, "        : \"+S\"(sp), \"+d\"(csp)\n");
+    fprintf(f, "        : \"D\"(stack), \"c\"(control_stack)\n");
+    fprintf(f, "        : \"rax\", \"r8\", \"r9\", \"r10\", \"r11\", \"memory\"\n");
     fprintf(f, "    );\n");
     fprintf(f, "}\n");
 
@@ -308,6 +331,10 @@ int main(void) {
     UserWord *current_word = NULL;
     int loop_labels[32]; // Tableau pour suivre les étiquettes des boucles imbriquées
     int loop_depth = 0;  // Profondeur d'imbrication des boucles
+
+    // Initialiser la pile à vide au démarrage
+    sp = 0;
+    csp = 0;
 
     printf("Forth interpreter (tapez 'quit' pour quitter)\n");
     while (1) {
@@ -449,11 +476,16 @@ int main(void) {
                     UserWord *user_word = lookup_user(token);
                     if (user_word) {
                         if (user_word->compiled_func) {
+                            // printf("Exécution du mot compilé : %s\n", token);
                             user_word->compiled_func(stack, &sp, control_stack, &csp);
+                            // print_stack();
                         } else {
+                            printf("Exécution des tokens du mot : %s\n", token);
                             for (int i = 0; i < user_word->token_count && !error_occurred; i++) {
                                 if (user_word->tokens[i].is_number == 1) {
                                     push(user_word->tokens[i].data.value);
+                                    // printf("Après push %lld : ", user_word->tokens[i].data.value);
+                                    // print_stack();
                                 } else if (user_word->tokens[i].is_number == 0) {
                                     void (*func)(int64_t *, int *, int64_t *, int *) = user_word->tokens[i].data.func;
                                     int is_loop_primitive = 0;
@@ -473,6 +505,8 @@ int main(void) {
                                             error_occurred = 1;
                                         } else {
                                             func(stack, &sp, control_stack, &csp);
+                                            // printf("Après primitive de boucle : ");
+                                            // print_stack();
                                         }
                                     } else {
                                         if ((func == (void (*)(int64_t *, int *, int64_t *, int *))forth_add ||
@@ -494,9 +528,13 @@ int main(void) {
                                         } else {
                                             if (func == (void (*)(int64_t *, int *, int64_t *, int *))forth_dot) {
                                                 int64_t value = forth_dot(stack, &sp);
-                                                // print_top(value);
+                                                print_top(value);
+                                                // printf("Après DOT : ");
+                                                // print_stack();
                                             } else {
                                                 ((void (*)(int64_t *, int *))func)(stack, &sp);
+                                                // printf("Après primitive : ");
+                                                // print_stack();
                                             }
                                         }
                                     }
@@ -517,6 +555,8 @@ int main(void) {
                                     error_occurred = 1;
                                 } else {
                                     func(stack, &sp, control_stack, &csp);
+                                    // printf("Après primitive de boucle %s : ", token);
+                                    // print_stack();
                                 }
                             } else {
                                 void (*func)(int64_t *, int *) = func_ptr;
@@ -535,9 +575,13 @@ int main(void) {
                                 } else {
                                     if (func == (void (*)(int64_t *, int *))forth_dot) {
                                         int64_t value = forth_dot(stack, &sp);
-                                        // print_top(value);
+                                        //print_top(value);
+                                       // printf("Après DOT : ");
+                                       //  print_stack();
                                     } else {
                                         func(stack, &sp);
+                                        // printf("Après primitive %s : ", token);
+                                       //  print_stack();
                                     }
                                 }
                             }
@@ -546,6 +590,8 @@ int main(void) {
                             int64_t value = strtoll(token, &endptr, 10);
                             if (endptr != token && *endptr == '\0') {
                                 push(value);
+                                // printf("Après push %lld : ", value);
+                                // print_stack();
                             } else {
                                 printf("Mot inconnu : %s\n", token);
                                 error_occurred = 1;
