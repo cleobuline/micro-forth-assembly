@@ -15,12 +15,12 @@ asm(
     "    test rsi, rsi\n"               /* Vérifier que rsi (sp) n'est pas NULL */
     "    jz .stack_empty\n"
     "    test rdi, rdi\n"               /* Vérifier que rdi (stack) n'est pas NULL */
-    "    jz .stack_empty\n"
+    "    jz .end\n"
     "    mov rbx, [rsi]\n"              /* rbx = sp */
     "    cmp rbx, 2\n"                  /* Vérifie si sp >= 2 */
-    "    jl .stack_empty\n"
+    "    jl .end\n"
     "    test rbx, rbx\n"               /* Vérifie que rbx n'est pas négatif */
-    "    js .stack_empty\n"
+    "    js .end\n"
     "    mov r12, [rdi + rbx*8 - 8]\n"  /* r12 = stack[sp-1] (diviseur) */
     "    cmp r12, 0\n"                  /* Vérifie si diviseur == 0 */
     "    je .div_by_zero\n"
@@ -36,14 +36,7 @@ asm(
     "    pop rbp\n"
     "    pop rbx\n"
     "    ret\n"
-    ".stack_empty:\n"
-    "    pop rdx\n"
-    "    pop r13\n"
-    "    pop r12\n"
-    "    pop rbp\n"
-    "    pop rbx\n"
-    "    ret\n"
-    ".div_by_zero:\n"
+    ".end:\n"
     "    pop rdx\n"
     "    pop r13\n"
     "    pop r12\n"
