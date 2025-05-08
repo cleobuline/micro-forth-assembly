@@ -12,26 +12,21 @@ asm(
     "    push r12\n"
     "    push r13\n"
     "    test rsi, rsi\n"               /* Vérifier que rsi (sp) n'est pas NULL */
-    "    jz .stack_empty\n"
+    "    jz .end\n"
     "    test rdi, rdi\n"               /* Vérifier que rdi (stack) n'est pas NULL */
-    "    jz .stack_empty\n"
+    "    jz .end\n"
     "    mov rbx, [rsi]\n"              /* rbx = sp */
     "    cmp rbx, 2\n"                  /* Vérifie si sp >= 2 */
-    "    jl .stack_empty\n"
+    "    jl .end\n"
     "    test rbx, rbx\n"               /* Vérifie que rbx n'est pas négatif */
-    "    js .stack_empty\n"
+    "    js .end\n"
     "    mov rax, [rdi + rbx*8 - 16]\n" /* rax = stack[sp-2] */
     "    mov r12, [rdi + rbx*8 - 8]\n"  /* r12 = stack[sp-1] (utilise r12 au lieu de rcx) */
     "    sub rax, r12\n"                /* rax = stack[sp-2] - stack[sp-1] */
     "    mov [rdi + rbx*8 - 16], rax\n" /* stack[sp-2] = résultat */
     "    dec rbx\n"                     /* sp -= 1 */
     "    mov [rsi], rbx\n"              /* Met à jour sp (rbx est 64 bits, compatible avec int) */
-    "    pop r13\n"
-    "    pop r12\n"
-    "    pop rbp\n"
-    "    pop rbx\n"
-    "    ret\n"
-    ".stack_empty:\n"
+    ".end:\n"
     "    pop r13\n"
     "    pop r12\n"
     "    pop rbp\n"
