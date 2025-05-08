@@ -1,4 +1,4 @@
-# micro-forth-assemby
+# micro-forth-assembly
 a minimal forth with assembled word in dll 
 
 ubuntu x 86-64 
